@@ -1,6 +1,5 @@
 from torch import nn
 
-device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class CustomNet(nn.Module):
     def __init__(self):
         super(CustomNet, self).__init__()
