@@ -2,20 +2,33 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+import wandb  # Import wandb
 from data.load import TinyImageNetDataLoader
 from models.lab2 import CustomNet  # Ensure this points to your model
 
+# Initialize wandb
+wandb.init(
+    project="tinyimagenet-classification",  # Set your project name
+    config={
+        "num_epochs": 10,
+        "learning_rate": 0.001,
+        "batch_size": 32,
+        "optimizer": "Adam",
+    }
+)
+
 # Hyperparameters
-num_epochs = 10
-learning_rate = 0.001
+config = wandb.config  # Fetch wandb config
+num_epochs = config.num_epochs
+learning_rate = config.learning_rate
 
 # Initialize DataLoader
-data_loader = TinyImageNetDataLoader(batch_size=32)
+data_loader = TinyImageNetDataLoader(batch_size=config.batch_size)
 train_loader, val_loader = data_loader.get_loaders()
 
 # Model setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = CustomNet().to(device)  # Ensure you have a model defined in `models.lab2`
+model = CustomNet().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -31,24 +44,37 @@ def train(epoch, model, train_loader, criterion, optimizer):
     for batch_idx, (inputs, targets) in enumerate(progress_bar):
         inputs, targets = inputs.to(device), targets.to(device)
 
-        optimizer.zero_grad()  # Reset gradients
+        optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, targets)
 
-        loss.backward()  # Compute gradients
-        optimizer.step()  # Update weights
+        loss.backward()
+        optimizer.step()
 
         running_loss += loss.item()
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        # Update progress bar with loss and accuracy
+        # Update progress bar
         progress_bar.set_postfix(loss=loss.item(), acc=100. * correct / total)
+
+        # Log metrics to wandb
+        wandb.log({
+            "batch_loss": loss.item(),
+            "batch_accuracy": 100. * correct / total
+        })
 
     train_loss = running_loss / len(train_loader)
     train_accuracy = 100. * correct / total
     print(f'Train Epoch: {epoch} Loss: {train_loss:.6f} Acc: {train_accuracy:.2f}%')
+
+    # Log epoch-level metrics
+    wandb.log({
+        "epoch": epoch,
+        "train_loss": train_loss,
+        "train_accuracy": train_accuracy
+    })
 
 # Training Loop
 for epoch in range(1, num_epochs + 1):
@@ -56,4 +82,5 @@ for epoch in range(1, num_epochs + 1):
 
 # Save model after training
 torch.save(model.state_dict(), "model.pth")
-print("Model saved as model.pth")
+wandb.save("model.pth")  # Save model to wandb
+print("Model saved as model.pth and logged to wandb")
