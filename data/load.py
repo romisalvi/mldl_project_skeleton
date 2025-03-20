@@ -1,26 +1,26 @@
+import os
+import shutil
 import torchvision.transforms as T
 from torchvision.datasets import ImageFolder
-with open('tiny-imagenet/tiny-imagenet-200/val/val_annotations.txt') as f:
-    for line in f:
-        fn, cls, *_ = line.split('\t')
-        os.makedirs(f'tiny-imagenet/tiny-imagenet-200/val/{cls}', exist_ok=True)
+from torch.utils.data import DataLoader
 
-        shutil.copyfile(f'tiny-imagenet/tiny-imagenet-200/val/images/{fn}', f'tiny-imagenet/tiny-imagenet-200/val/{cls}/{fn}')
+class TinyImageNetDataLoader:
+    def __init__(self, data_dir='tiny-imagenet/tiny-imagenet-200', batch_size=32, num_workers=4):
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.transform = T.Compose([
+            T.Resize((224, 224)),  # Resize images to match model input size
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        self.train_dataset = ImageFolder(root=os.path.join(self.data_dir, 'train'), transform=self.transform)
+        self.val_dataset = ImageFolder(root=os.path.join(self.data_dir, 'val'), transform=self.transform)
 
-shutil.rmtree('tiny-imagenet/tiny-imagenet-200/val/images')
+        self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+        self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
 
-
-transform = T.Compose([
-    T.Resize((224, 224)),  # Resize to fit the input dimensions of the network
-    T.ToTensor(),
-    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
-
-# root/{classX}/x001.jpg
-
-tiny_imagenet_dataset_train =ImageFolder(root='tiny-imagenet/tiny-imagenet-200/train', transform=transform)
-tiny_imagenet_dataset_val =ImageFolder(root='tiny-imagenet/tiny-imagenet-200/val', transform=transform)
-
-
-train_loader = torch.utils.data.DataLoader(tiny_imagenet_dataset_train, batch_size=32, shuffle=True, num_workers=8)
-val_loader = torch.utils.data.DataLoader(tiny_imagenet_dataset_val, batch_size=32, shuffle=False)
+    
+    def get_loaders(self):
+        """Returns the training and validation DataLoaders."""
+        return self.train_loader, self.val_loader
