@@ -10,7 +10,7 @@ from models.lab2 import CustomNet  # Ensure this points to your model
 wandb.init(
     project="tinyimagenet-classification",  # Set your project name
     config={
-        "num_epochs": 10,
+        "num_epochs": 3,
         "learning_rate": 0.001,
         "batch_size": 32,
         "optimizer": "Adam",
