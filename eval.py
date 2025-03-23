@@ -1,16 +1,15 @@
-# Validation loop
 import torch
+
 def validate(model, val_loader, criterion):
     model.eval()
     val_loss = 0
-    size=len(val_loader)
-
+    size = max(1, len(val_loader))  # Avoid division by zero
     correct, total = 0, 0
 
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(val_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
-
+            
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
@@ -20,7 +19,7 @@ def validate(model, val_loader, criterion):
             correct += predicted.eq(targets).sum().item()
 
     val_loss = val_loss / size
-    val_accuracy = 100. * correct / total
+    val_accuracy = 100. * correct / total if total > 0 else 0  # Prevent division by zero
 
     print(f'Validation Loss: {val_loss:.6f} Acc: {val_accuracy:.2f}%')
-return val_accuracy
+    return val_accuracy  # Corrected indentation
